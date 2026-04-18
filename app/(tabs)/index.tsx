@@ -1,98 +1,88 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import axios from 'axios';
+import React, { useEffect, useState } from 'react';
+import { Dimensions, Text, View } from 'react-native';
+import { LineChart } from 'react-native-chart-kit';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [data, setData] = useState<number[]>([]);
+  const [labels, setLabels] = useState<string[]>([]);
+  const [ndata, setNdata] = useState<number>(5);
+  const [nlabels, setNLabels] = useState<number>(5);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      getData();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const getData = async () => {
+    try {
+      const res = await axios.get('http://192.168.151.89/data');
+      const value = parseFloat(res.data.co2);
+
+      if (!isNaN(value) && isFinite(value)) {
+        setData(prev => {
+          let newData = [...prev, value];
+          if (newData.length > ndata) newData.shift();
+          return newData;
+        });
+
+        // Agrega una etiqueta con la hora actual
+        
+        setLabels(prev => {
+          let newLabels = [...prev, new Date().toLocaleTimeString().slice(0,8)];
+          if (newLabels.length > nlabels) newLabels.shift();
+          return newLabels;
+        });
+        
+      }
+
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const avg =
+    data.length > 0
+      ? (data.reduce((a, b) => a + b, 0) / data.length).toFixed(2)
+      : "0";
+
+  return (
+    <View style={{ flex: 1, padding: 0, marginTop: 40 }}>
+      <Text style={{ fontSize: 20, textAlign: 'center', marginBottom: 20 }}>
+        CO2 en tiempo real
+      </Text>
+
+      {/* Solo renderiza la gráfica si hay datos */}
+      {data.length > 0 ? (
+        <LineChart
+          data={{
+            labels: labels,
+            datasets: [{ data: data }]
+          }}
+          width={Dimensions.get("window").width}
+          height={220}
+          yAxisSuffix="ppm"
+          chartConfig={{
+            decimalPlaces: 0,
+            backgroundGradientFrom: "rgba(254, 233, 213, 1)",
+            backgroundGradientTo: "#fff",
+            color: (opacity = 1) => `rgba(200, 100, 0, ${opacity})`
+          }}
+        />
+      ) : (
+        <View style={{ height: 220, justifyContent: 'center' }}>
+          <Text style={{ textAlign: 'center' }}>Cargando datos del sensor...</Text>
+        </View>
+      )}
+
+      <Text style={{ marginTop: 20, textAlign: 'center' }}>
+        Promedio: {avg} ppm
+      </Text>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
