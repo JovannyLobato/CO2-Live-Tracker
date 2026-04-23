@@ -3,8 +3,10 @@
 #include <Wire.h>
 #include "SparkFun_SCD4x_Arduino_Library.h"
 
-const char* ssid = "SM-S901W8364";
-const char* password = "mfdoom13";
+// const char* ssid = "SM-S901W8364";
+// const char* password = "mfdoom13";
+const char* ssid = "movil123";
+const char* password = "del1al48";
 
 WebServer server(80);
 SCD4x mySensor;
@@ -12,7 +14,7 @@ int co2 = 0;
 
 void handleData() {
   String json = "{\"co2\":" + String(co2) + "}";
-  server.send(200, "application/json", json);
+  server.send(200, "application/json", json); 
 }
 
 void setup() {
